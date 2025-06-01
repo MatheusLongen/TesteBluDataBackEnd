@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using TesteBluData.Data;
 using TesteBluData.Models;
+using TesteBluData.Validates;
 
 namespace TesteBluData.Controllers
 {
@@ -67,10 +68,22 @@ namespace TesteBluData.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEmpresa(int id)
         {
-            var empresa = await _context.Empresas.FindAsync(id);
+            var empresa = await _context.Empresas
+                .Include(e => e.Fornecedores)
+                    .ThenInclude(f => f.Telefones)
+                .FirstOrDefaultAsync(e => e.Id == id);
+
             if (empresa == null) return NotFound();
 
+            foreach (var fornecedor in empresa.Fornecedores)
+            {
+                _context.Telefones.RemoveRange(fornecedor.Telefones);
+            }
+
+            _context.Fornecedores.RemoveRange(empresa.Fornecedores);
+
             _context.Empresas.Remove(empresa);
+
             await _context.SaveChangesAsync();
 
             return NoContent();

@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using TesteBluData.Data;
 using TesteBluData.Models;
+using TesteBluData.Validates;
 
 namespace TesteBluData.Controllers
 {
@@ -60,32 +61,10 @@ namespace TesteBluData.Controllers
         public async Task<ActionResult<Fornecedor>> PostFornecedor(Fornecedor fornecedor)
         {
             var empresa = await _context.Empresas.FindAsync(fornecedor.EmpresaId);
-            if (empresa == null)
-                return BadRequest("Empresa inválida.");
+            var erro = FornecedorValidator.ValidarFornecedor(fornecedor, empresa);
 
-            if (string.Equals(empresa.UF?.Trim(), "PR", StringComparison.OrdinalIgnoreCase) && fornecedor.CPFouCNPJ.Length == 14)
-            {
-                if (!fornecedor.DataNascimento.HasValue)
-                    return BadRequest(new { message = "Fornecedor pessoa física precisa informar Data de Nascimento" });
-
-                var idade = DateTime.Today.Year - fornecedor.DataNascimento.Value.Year;
-                if (fornecedor.DataNascimento.Value > DateTime.Today.AddYears(-idade)) idade--;
-
-                if (idade < 18)
-                    return BadRequest(new { message = "Fornecedor pessoa física menor de idade não pode ser cadastrado para essa empresa" });
-            }
-
-            if (fornecedor.CPFouCNPJ.Length == 14)
-            {
-                if (!ValidadorCpfCnpj.IsCpf(fornecedor.CPFouCNPJ))
-                    return BadRequest(new { message = "CPF inválido." });
-
-                if (string.IsNullOrEmpty(fornecedor.RG))
-                    return BadRequest(new { message = "RG obrigatório para fornecedor pessoa física" });
-
-                if (!fornecedor.DataNascimento.HasValue)
-                    return BadRequest(new { message = "Data de nascimento obrigatória para fornecedor pessoa física" });
-            }
+            if (erro != null)
+                return BadRequest(new { message = erro });
 
             fornecedor.DataCadastro = fornecedor.DataCadastro.ToUniversalTime();
 
@@ -104,32 +83,10 @@ namespace TesteBluData.Controllers
             if (id != fornecedor.Id) return BadRequest();
 
             var empresa = await _context.Empresas.FindAsync(fornecedor.EmpresaId);
-            if (empresa == null)
-                return BadRequest("Empresa inválida.");
+            var erro = FornecedorValidator.ValidarFornecedor(fornecedor, empresa);
 
-            if (empresa.UF.Equals("PR", StringComparison.OrdinalIgnoreCase) && fornecedor.CPFouCNPJ.Length == 14)
-            {
-                if (!fornecedor.DataNascimento.HasValue)
-                    return BadRequest(new { message = "Por favor, informe a data de nascimento do fornecedor" });
-
-                var idade = DateTime.Today.Year - fornecedor.DataNascimento.Value.Year;
-                if (fornecedor.DataNascimento.Value > DateTime.Today.AddYears(-idade)) idade--;
-
-                if (idade < 18)
-                    return BadRequest(new { message = "Fornecedor menor de 18 anos não pode ser cadastrado para essa empresa" });
-            }
-
-            if (fornecedor.CPFouCNPJ.Length == 14)
-            {
-                if (!ValidadorCpfCnpj.IsCpf(fornecedor.CPFouCNPJ))
-                    return BadRequest(new { message = "CPF inválido." });
-
-                if (string.IsNullOrEmpty(fornecedor.RG))
-                    return BadRequest(new { message = "O RG é obrigatório para fornecedores pessoa física" });
-
-                if (!fornecedor.DataNascimento.HasValue)
-                    return BadRequest(new { message = "Por favor, informe a data de nascimento do fornecedor" });
-            }
+            if (erro != null)
+                return BadRequest(new { message = erro });
 
             fornecedor.DataCadastro = fornecedor.DataCadastro.ToUniversalTime();
 
